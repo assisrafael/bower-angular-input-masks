@@ -1,0 +1,22 @@
+{
+  "name": "angular-input-masks",
+  "version": "1.0.10",
+  "description": "Personalized input masks for AngularJS",
+  "main": "src/masks.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/assisrafael/bower-angular-input-masks.git"
+  },
+  "keywords": [
+    "angular",
+    "input",
+    "masks"
+  ],
+  "author": "Igor Rafael <igor.rafael@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/assisrafael/angular-input-masks/issues"
+  },
+  "homepage": "https://github.com/assisrafael/angular-input-masks"
+}
