@@ -1,7 +1,7 @@
 /**
- * angular-mask
+ * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v1.3.1
+ * @version v1.4.1
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -239,12 +239,8 @@ angular.module('ui.utils.masks.us.phone', [])
 
 	return {
 		restrict: 'A',
-		require: '?ngModel',
+		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			if (!ctrl) {
-				return;
-			}
-
 			ctrl.$formatters.push(function(value) {
 				return applyPhoneMask(usPhoneValidators.usPhoneNumber(ctrl, value));
 			});
@@ -322,33 +318,21 @@ angular.module('ui.utils.masks.global.date', dependencies)
 
 	return {
 		restrict: 'A',
-		require: '?ngModel',
+		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
 			var dateMask = new StringMask(dateFormat.replace(/[YMD]/g,'0'));
 
-			function clearValue (value) {
-				if(angular.isUndefined(value)) {
-					return value;
-				}
-
-				return value.replace(/[^0-9]/g, '');
-			}
-
 			function applyMask (value) {
-				if(angular.isUndefined(value) || value.length === 0) {
-					return;
-				}
-
-				var cleanValue = clearValue(value);
-				var formatedValue = dateMask.process(cleanValue).result;
+				var cleanValue = value.replace(/[^0-9]/g, '');
+				var formatedValue = dateMask.process(cleanValue).result || '';
 
 				return formatedValue.trim().replace(/[^0-9]$/, '');
 			}
 
 			function formatter (value) {
 				$log.debug('[uiDateMask] Formatter called: ', value);
-				if(angular.isUndefined(value)) {
-					return;
+				if(ctrl.$isEmpty(value)) {
+					return value;
 				}
 
 				var formatedValue = applyMask(moment(value).format(dateFormat));
@@ -358,6 +342,10 @@ angular.module('ui.utils.masks.global.date', dependencies)
 
 			function parser(value) {
 				$log.debug('[uiDateMask] Parser called: ', value);
+				if(ctrl.$isEmpty(value)) {
+					validator(value);
+					return value;
+				}
 
 				var formatedValue = applyMask(value);
 				$log.debug('[uiDateMask] Formated value: ', formatedValue);
@@ -396,16 +384,12 @@ angular.module('ui.utils.masks.global.money', [
 	function ($locale, $parse, PreFormatters, NumberValidators) {
 		return {
 			restrict: 'A',
-			require: '?ngModel',
+			require: 'ngModel',
 			link: function (scope, element, attrs, ctrl) {
 				var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 					thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
 					currencySym = $locale.NUMBER_FORMATS.CURRENCY_SYM,
-					decimals = parseInt(attrs.uiMoneyMask);
-
-				if (!ctrl) {
-					return;
-				}
+					decimals = $parse(attrs.uiMoneyMask)(scope);
 
 				if (angular.isDefined(attrs.uiHideGroupSep)){
 					thousandsDelimiter = '';
@@ -414,21 +398,22 @@ angular.module('ui.utils.masks.global.money', [
 				if(isNaN(decimals)) {
 					decimals = 2;
 				}
+
 				var decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
 				var maskPattern = currencySym+' #'+thousandsDelimiter+'##0'+decimalsPattern;
 				var moneyMask = new StringMask(maskPattern, {reverse: true});
 
-				ctrl.$formatters.push(function(value) {
-					if(angular.isUndefined(value)) {
+				function formatter(value) {
+					if(ctrl.$isEmpty(value)) {
 						return value;
 					}
 
 					var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
 					return moneyMask.apply(valueToFormat);
-				});
+				}
 
-				function parse(value) {
-					if (!value) {
+				function parser(value) {
+					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
 
@@ -444,7 +429,8 @@ angular.module('ui.utils.masks.global.money', [
 					return formatedValue ? parseInt(formatedValue.replace(/[^\d]+/g,''))/Math.pow(10,decimals) : null;
 				}
 
-				ctrl.$parsers.push(parse);
+				ctrl.$formatters.push(formatter);
+				ctrl.$parsers.push(parser);
 
 				if (attrs.uiMoneyMask) {
 					scope.$watch(attrs.uiMoneyMask, function(decimals) {
@@ -455,7 +441,7 @@ angular.module('ui.utils.masks.global.money', [
 						maskPattern = currencySym+' #'+thousandsDelimiter+'##0'+decimalsPattern;
 						moneyMask = new StringMask(maskPattern, {reverse: true});
 
-						parse(ctrl.$viewValue || '');
+						parser(ctrl.$viewValue);
 					});
 				}
 
@@ -495,15 +481,11 @@ angular.module('ui.utils.masks.global.number', [
 	function ($locale, $parse, PreFormatters, NumberMasks, NumberValidators) {
 		return {
 			restrict: 'A',
-			require: '?ngModel',
+			require: 'ngModel',
 			link: function (scope, element, attrs, ctrl) {
 				var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 					thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
 					decimals = $parse(attrs.uiNumberMask)(scope);
-
-				if (!ctrl) {
-					return;
-				}
 
 				if (angular.isDefined(attrs.uiHideGroupSep)){
 					thousandsDelimiter = '';
@@ -512,11 +494,12 @@ angular.module('ui.utils.masks.global.number', [
 				if(isNaN(decimals)) {
 					decimals = 2;
 				}
+
 				var viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter),
 					modelMask = NumberMasks.modelMask(decimals);
 
-				function parse(value) {
-					if(!value) {
+				function parser(value) {
+					if(ctrl.$isEmpty(value)) {
 						return value;
 					}
 
@@ -544,21 +527,22 @@ angular.module('ui.utils.masks.global.number', [
 					return actualNumber;
 				}
 
-				ctrl.$formatters.push(function(value) {
+				function formatter(value) {
+					if(ctrl.$isEmpty(value)) {
+						return value;
+					}
+
 					var prefix = '';
 					if(angular.isDefined(attrs.uiNegativeNumber) && value < 0){
 						prefix = '-';
 					}
 
-					if(!value) {
-						return value;
-					}
-
 					var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
 					return prefix + viewMask.apply(valueToFormat);
-				});
+				}
 
-				ctrl.$parsers.push(parse);
+				ctrl.$formatters.push(formatter);
+				ctrl.$parsers.push(parser);
 
 				if (attrs.uiNumberMask) {
 					scope.$watch(attrs.uiNumberMask, function(decimals) {
@@ -568,7 +552,7 @@ angular.module('ui.utils.masks.global.number', [
 						viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter);
 						modelMask = NumberMasks.modelMask(decimals);
 
-						parse(ctrl.$viewValue || '');
+						parser(ctrl.$viewValue);
 					});
 				}
 
@@ -612,15 +596,11 @@ angular.module('ui.utils.masks.global.percentage', [
 
 		return {
 			restrict: 'A',
-			require: '?ngModel',
+			require: 'ngModel',
 			link: function (scope, element, attrs, ctrl) {
 				var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 					thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
 					decimals = parseInt(attrs.uiPercentageMask);
-
-				if (!ctrl) {
-					return;
-				}
 
 				if (angular.isDefined(attrs.uiHideGroupSep)){
 					thousandsDelimiter = '';
@@ -629,21 +609,22 @@ angular.module('ui.utils.masks.global.percentage', [
 				if(isNaN(decimals)) {
 					decimals = 2;
 				}
+
 				var numberDecimals = decimals + 2;
 				var viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter),
 					modelMask = NumberMasks.modelMask(numberDecimals);
 
-				ctrl.$formatters.push(function(value) {
-					if(!value) {
+				function formatter(value) {
+					if(ctrl.$isEmpty(value)) {
 						return value;
 					}
 
 					var valueToFormat = preparePercentageToFormatter(value, decimals);
 					return viewMask.apply(valueToFormat) + ' %';
-				});
+				}
 
 				function parse(value) {
-					if(!value) {
+					if(ctrl.$isEmpty(value)) {
 						return value;
 					}
 
@@ -662,6 +643,7 @@ angular.module('ui.utils.masks.global.percentage', [
 					return actualNumber;
 				}
 
+				ctrl.$formatters.push(formatter);
 				ctrl.$parsers.push(parse);
 
 				if (attrs.uiPercentageMask) {
@@ -673,7 +655,7 @@ angular.module('ui.utils.masks.global.percentage', [
 						viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter);
 						modelMask = NumberMasks.modelMask(numberDecimals);
 
-						parse(ctrl.$viewValue || '');
+						parse(ctrl.$viewValue);
 					});
 				}
 
@@ -752,15 +734,11 @@ angular.module('ui.utils.masks.global.scientific-notation', [])
 				function formatter (value) {
 					$log.debug('[uiScientificNotationMask] Formatter called: ', value);
 
-					if (angular.isUndefined(value)) {
+					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
 
 					if (typeof value === 'string') {
-						if (value.length === 0) {
-							return value;
-						}
-
 						value = value.replace(decimalDelimiter, '.');
 					} else if (typeof value === 'number') {
 						value = value.toExponential(decimals);
@@ -769,7 +747,7 @@ angular.module('ui.utils.masks.global.scientific-notation', [])
 					var formattedValue, exponent;
 					var splittedNumber = splitNumber(value);
 
-					var integerPartOfSignificand = splittedNumber.integerPartOfSignificand | 0;
+					var integerPartOfSignificand = splittedNumber.integerPartOfSignificand || 0;
 					var numberToFormat = integerPartOfSignificand.toString();
 					if (angular.isDefined(splittedNumber.decimalPartOfSignificand)) {
 						numberToFormat += splittedNumber.decimalPartOfSignificand;
@@ -804,7 +782,7 @@ angular.module('ui.utils.masks.global.scientific-notation', [])
 				function parser (value) {
 					$log.debug('[uiScientificNotationMask] Parser called: ', value);
 
-					if(angular.isUndefined(value) || value.toString().length === 0) {
+					if(ctrl.$isEmpty(value)) {
 						return value;
 					}
 
@@ -822,12 +800,12 @@ angular.module('ui.utils.masks.global.scientific-notation', [])
 				function validator (value) {
 					$log.debug('[uiScientificNotationMask] Validator called: ', value);
 
-					if(angular.isUndefined(value)) {
+					if(ctrl.$isEmpty(value)) {
 						return value;
 					}
 
 					var isMaxValid = value < Number.MAX_VALUE;
-					ctrl.$setValidity('max', ctrl.$isEmpty(value) || isMaxValid);
+					ctrl.$setValidity('max', isMaxValid);
 					return value;
 				}
 
@@ -850,7 +828,7 @@ angular.module('ui.utils.masks.global.time', [])
 
 	return {
 		restrict: 'A',
-		require: '?ngModel',
+		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
 			var unformattedValueLength = 6,
 				formattedValueLength = 8,
@@ -876,7 +854,7 @@ angular.module('ui.utils.masks.global.time', [])
 
 				var cleanValue = clearValue(value);
 
-				if (cleanValue.length == 0) {
+				if (cleanValue.length === 0) {
 					return '';
 				}
 
