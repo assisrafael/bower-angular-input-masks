@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v1.4.1
+ * @version v1.4.2
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -850,22 +850,13 @@ angular.module('ui.utils.masks.br.cep', [])
 .directive('uiBrCepMask', [function() {
 	var cepMask = new StringMask('00000-000');
 
-	function clearValue (value) {
-		if(!value) {
-			return value;
-		}
-
+	function clearValue(value) {
 		return value.replace(/[^0-9]/g, '');
 	}
 
-	function applyCepMask (value, ctrl) {
-		if(!value) {
-			ctrl.$setValidity('cep', true);
-			return value;
-		}
+	function applyCepMask (value) {
 		var processed = cepMask.process(value);
-		ctrl.$setValidity('cep', processed.valid);
-		var formatedValue = processed.result;
+		var formatedValue = processed.result || '';
 		return formatedValue.trim().replace(/[^0-9]$/, '');
 	}
 
@@ -873,17 +864,28 @@ angular.module('ui.utils.masks.br.cep', [])
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			ctrl.$formatters.push(function(value) {
-				return applyCepMask(value, ctrl);
-			});
+			function validator(value) {
+				var processed = cepMask.process(value);
+				ctrl.$setValidity('cep', ctrl.$isEmpty(value) || processed.valid);
 
-			ctrl.$parsers.push(function(value) {
-				if (!value) {
-					return applyCepMask(value, ctrl);
+				return value;
+			}
+
+			function formatter(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
+				}
+
+				return applyCepMask(value);
+			}
+
+			function parser(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
 				}
 
 				var cleanValue = clearValue(value);
-				var formatedValue = applyCepMask(cleanValue, ctrl);
+				var formatedValue = applyCepMask(cleanValue);
 
 				if (ctrl.$viewValue !== formatedValue) {
 					ctrl.$setViewValue(formatedValue);
@@ -891,25 +893,44 @@ angular.module('ui.utils.masks.br.cep', [])
 				}
 
 				return clearValue(formatedValue);
-			});
+			}
+
+			ctrl.$formatters.push(formatter);
+			ctrl.$formatters.push(validator);
+			ctrl.$parsers.push(parser);
+			ctrl.$parsers.push(validator);
 		}
 	};
 }]);
 
 'use strict';
 
+/*global BrV*/
+var globalBrV;
+if (typeof BrV !== 'undefined') {
+	globalBrV = BrV;
+}
+
 (function() {
 	var cnpjPattern = new StringMask('00.000.000\/0000-00');
 	var cpfPattern = new StringMask('000.000.000-00');
 
 	function validateCPF (ctrl, value) {
-		var valid = ctrl.$isEmpty(value) || BrV.cpf.validate(value);
+		if (!globalBrV) {
+			return value;
+		}
+
+		var valid = ctrl.$isEmpty(value) || globalBrV.cpf.validate(value);
 		ctrl.$setValidity('cpf', valid);
 		return value;
 	}
 
 	function validateCNPJ (ctrl, value) {
-		var valid = ctrl.$isEmpty(value) || BrV.cnpj.validate(value);
+		if (!globalBrV) {
+			return value;
+		}
+
+		var valid = ctrl.$isEmpty(value) || globalBrV.cnpj.validate(value);
 		ctrl.$setValidity('cnpj', valid);
 		return value;
 	}
@@ -924,12 +945,13 @@ angular.module('ui.utils.masks.br.cep', [])
 		}
 	}
 
+	function removeNonDigits(value) {
+		return value.replace(/[^\d]/g, '');
+	}
+
 	function uiBrCpfMask() {
 		function applyCpfMask (value) {
-			if(!value) {
-				return value;
-			}
-			var formatedValue = cpfPattern.apply(value);
+			var formatedValue = cpfPattern.apply(value) || '';
 			return formatedValue.trim().replace(/[^0-9]$/, '');
 		}
 
@@ -937,112 +959,133 @@ angular.module('ui.utils.masks.br.cep', [])
 			restrict: 'A',
 			require: 'ngModel',
 			link: function (scope, element, attrs, ctrl) {
-				ctrl.$formatters.push(function(value) {
-					return applyCpfMask(validateCPF(ctrl, value));
-				});
-
-				ctrl.$parsers.push(function(value) {
-					if(!value) {
+				function formatter(value) {
+					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
 
-					var actualNumber = value.replace(/[^\d]/g,'');
-					var formatedValue = applyCpfMask(actualNumber);
+					return applyCpfMask(removeNonDigits(value));
+				}
+
+				function parser(value) {
+					if (ctrl.$isEmpty(value)) {
+						return value;
+					}
+
+					var formatedValue = applyCpfMask(removeNonDigits(value));
+					var actualNumber = removeNonDigits(formatedValue);
 
 					if (ctrl.$viewValue !== formatedValue) {
 						ctrl.$setViewValue(formatedValue);
 						ctrl.$render();
 					}
 
-					return formatedValue.replace(/[^\d]+/g,'');
-				});
+					return actualNumber;
+				}
 
-				ctrl.$parsers.push(function(value) {
+				function validator(value) {
 					return validateCPF(ctrl, value);
-				});
+				}
+
+				ctrl.$formatters.push(formatter);
+				ctrl.$formatters.push(validator);
+				ctrl.$parsers.push(parser);
+				ctrl.$parsers.push(validator);
 			}
 		};
 	}
 
 	function uiBrCnpjMask() {
 		function applyCnpjMask (value) {
-			if(!value) {
-				return value;
-			}
-			var formatedValue = cnpjPattern.apply(value);
+			var formatedValue = cnpjPattern.apply(value) || '';
 			return formatedValue.trim().replace(/[^0-9]$/, '');
 		}
+
 		return {
 			restrict: 'A',
 			require: 'ngModel',
 			link: function (scope, element, attrs, ctrl) {
-				ctrl.$formatters.push(function(value) {
-					return applyCnpjMask(validateCNPJ(ctrl, value));
-				});
-
-				ctrl.$parsers.push(function(value) {
-					if(!value) {
+				function formatter(value) {
+					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
 
-					var actualNumber = value.replace(/[^\d]+/g,'');
-					var formatedValue = applyCnpjMask(actualNumber);
+					return applyCnpjMask(removeNonDigits(value));
+				}
+
+				function parser(value) {
+					if (ctrl.$isEmpty(value)) {
+						return value;
+					}
+
+					var formatedValue = applyCnpjMask(removeNonDigits(value));
+					var actualNumber = removeNonDigits(formatedValue);
 
 					if (ctrl.$viewValue !== formatedValue) {
 						ctrl.$setViewValue(formatedValue);
 						ctrl.$render();
 					}
 
-					return formatedValue.replace(/[^\d]+/g,'');
-				});
+					return actualNumber;
+				}
 
-				ctrl.$parsers.push(function(value) {
+				function validator(value) {
 					return validateCNPJ(ctrl, value);
-				});
+				}
+
+				ctrl.$formatters.push(formatter);
+				ctrl.$parsers.push(parser);
+				ctrl.$parsers.push(validator);
 			}
 		};
 	}
 
 	function uiBrCpfCnpjMask() {
 		function applyCpfCnpjMask (value) {
-			if(!value) {
-				return value;
-			}
 			var formatedValue;
 			if (value.length > 11) {
 				formatedValue = cnpjPattern.apply(value);
 			} else {
-				formatedValue = cpfPattern.apply(value);
+				formatedValue = cpfPattern.apply(value) || '';
 			}
 			return formatedValue.trim().replace(/[^0-9]$/, '');
 		}
+
 		return {
 			restrict: 'A',
 			require: 'ngModel',
 			link: function (scope, element, attrs, ctrl) {
-				ctrl.$formatters.push(function(value) {
-					return applyCpfCnpjMask(validateCPForCNPJ(ctrl, value));
-				});
-
-				ctrl.$parsers.push(function(value) {
-					if(!value) {
+				function formatter(value) {
+					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
 
-					var actualNumber = value.replace(/[^\d]+/g,'');
-					var formatedValue = applyCpfCnpjMask(actualNumber);
+					return applyCpfCnpjMask(removeNonDigits(value));
+				}
+
+				function parser(value) {
+					if (ctrl.$isEmpty(value)) {
+						return value;
+					}
+
+					var formatedValue = applyCpfCnpjMask(removeNonDigits(value));
+					var actualNumber = removeNonDigits(formatedValue);
 
 					if (ctrl.$viewValue !== formatedValue) {
 						ctrl.$setViewValue(formatedValue);
 						ctrl.$render();
 					}
 
-					return formatedValue.replace(/[^\d]+/g,'');
-				});
+					return actualNumber;
+				}
 
-				ctrl.$parsers.push(function(value) {
+				function validator(value) {
 					return validateCPForCNPJ(ctrl, value);
-				});
+				}
+
+				ctrl.$formatters.push(formatter);
+				ctrl.$parsers.push(parser);
+				ctrl.$parsers.push(validator);
 			}
 		};
 	}
@@ -1060,6 +1103,12 @@ angular.module('ui.utils.masks.br.cep', [])
 })();
 
 'use strict';
+
+/*global BrV*/
+var globalBrV;
+if (typeof BrV !== 'undefined') {
+	globalBrV = BrV;
+}
 
 angular.module('ui.utils.masks.br.ie', [])
 .directive('uiBrIeMask', ['$parse', function($parse) {
@@ -1098,67 +1147,71 @@ angular.module('ui.utils.masks.br.ie', [])
 	};
 
 	function clearValue (value) {
-		if(!value) {
+		if (!value) {
 			return value;
 		}
+
 		return value.replace(/[^0-9]/g, '');
 	}
 
 	function getMask(uf, value) {
-		if(!uf || !ieMasks[uf]) {
+		if (!uf || !ieMasks[uf]) {
 			return undefined;
 		}
-		var _uf = uf.toUpperCase();
-		if (_uf === 'SP' && /^P/i.test(value)) {
+
+		if (uf === 'SP' && /^P/i.test(value)) {
 			return ieMasks.SP[1].mask;
 		}
+
 		var masks = ieMasks[uf];
 		var i = 0;
 		while(masks[i].chars && masks[i].chars < clearValue(value).length && i < masks.length - 1) {
 			i++;
 		}
+
 		return masks[i].mask;
 	}
 
-	function applyIEMask (value, uf, ctrl) {
+	function applyIEMask(value, uf) {
 		var mask = getMask(uf, value);
-		if(!value || !mask) {
-			ctrl.$setValidity('ie', true);
+
+		if(!mask) {
 			return value;
 		}
+
 		var processed = mask.process(clearValue(value));
-		ctrl.$setValidity('ie', BrV.ie(uf).validate(value));
-		var formatedValue = processed.result;
-		if (uf && uf.toUpperCase() === 'SP' && /^p/i.test(value)) {
-			return 'P'+(formatedValue ? formatedValue.trim().replace(/[^0-9]$/, '') : '');
+		var formatedValue = processed.result || '';
+		formatedValue = formatedValue.trim().replace(/[^0-9]$/, '');
+
+		if (uf === 'SP' && /^p/i.test(value)) {
+			return 'P' + formatedValue;
 		}
-		if(!formatedValue) {
-			return formatedValue;
-		}
-		return formatedValue.trim().replace(/[^0-9]$/, '');
+
+		return formatedValue;
 	}
 
 	return {
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			var state = $parse(attrs.uiBrIeMask)(scope);
+			var state = $parse(attrs.uiBrIeMask)(scope) || '';
+			state = state.toUpperCase();
 
-			scope.$watch(attrs.uiBrIeMask, function(newState) {
-				state = newState;
-				applyIEMask(ctrl.$viewValue, state, ctrl);
-			});
-
-			ctrl.$formatters.push(function(value) {
-				return applyIEMask(value, state, ctrl);
-			});
-
-			ctrl.$parsers.push(function(value) {
-				if (!value) {
-					return applyIEMask(value, state, ctrl);
+			function formatter(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
 				}
 
-				var formatedValue = applyIEMask(value, state, ctrl);
+				return applyIEMask(value, state);
+			}
+
+			function parser(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
+				}
+
+				var formatedValue = applyIEMask(value, state);
+				var actualValue = clearValue(formatedValue);
 
 				if (ctrl.$viewValue !== formatedValue) {
 					ctrl.$setViewValue(formatedValue);
@@ -1166,9 +1219,34 @@ angular.module('ui.utils.masks.br.ie', [])
 				}
 
 				if (state && state.toUpperCase() === 'SP' && /^p/i.test(value)) {
-					return 'P'+clearValue(formatedValue);
+					return 'P' + actualValue;
 				}
-				return clearValue(formatedValue);
+
+				return actualValue;
+			}
+
+			function validator(value) {
+				if (!globalBrV) {
+					return value;
+				}
+
+				var isValid = ctrl.$isEmpty(value) || globalBrV.ie(state).validate(value);
+				ctrl.$setValidity('ie', isValid);
+
+				return value;
+			}
+
+			ctrl.$formatters.push(formatter);
+			ctrl.$formatters.push(validator);
+			ctrl.$parsers.push(parser);
+			ctrl.$parsers.push(validator);
+
+			scope.$watch(attrs.uiBrIeMask, function(newState) {
+				state = newState || '';
+				state = state.toUpperCase();
+
+				parser(ctrl.$viewValue);
+				validator(ctrl.$viewValue);
 			});
 		}
 	};
@@ -1182,10 +1260,6 @@ angular.module('ui.utils.masks.br.nfe', [])
 		' 0000 0000 0000 0000 0000 0000');
 
 	function clearValue (value) {
-		if (angular.isUndefined(value) || value.length === 0) {
-			return value;
-		}
-
 		return value.replace(/[^0-9]/g, '').slice(0, 44);
 	}
 
@@ -1193,9 +1267,9 @@ angular.module('ui.utils.masks.br.nfe', [])
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			function formatter (value) {
+			function formatter(value) {
 				$log.debug('[uiNfeAccessKeyMask] Formatter called: ', value);
-				if(angular.isUndefined(value) || value.length === 0) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
@@ -1203,8 +1277,11 @@ angular.module('ui.utils.masks.br.nfe', [])
 				return formattedValue.replace(/[^0-9]$/, '');
 			}
 
-			function parser (value) {
+			function parser(value) {
 				$log.debug('[uiNfeAccessKeyMask] Parser called: ', value);
+				if (ctrl.$isEmpty(value)) {
+					return value;
+				}
 
 				var modelValue = clearValue(value);
 				var viewValue = formatter(modelValue);
@@ -1220,13 +1297,9 @@ angular.module('ui.utils.masks.br.nfe', [])
 			function validator (value) {
 				$log.debug('[uiNfeAccessKeyMask] Validator called: ', value);
 
-				if(angular.isUndefined(value)) {
-					return value;
-				}
+				var isValid = ctrl.$isEmpty(value) || value.toString().length === 44;
 
-				var isValid = value.toString().length === 44;
-
-				ctrl.$setValidity('nfe-access-key', ctrl.$isEmpty(value) || isValid);
+				ctrl.$setValidity('nfeAccessKey', isValid);
 				return value;
 			}
 
@@ -1241,16 +1314,7 @@ angular.module('ui.utils.masks.br.nfe', [])
 'use strict';
 
 angular.module('ui.utils.masks.br.phone', [])
-.factory('PhoneValidators', [function() {
-	return {
-		brPhoneNumber: function (ctrl, value) {
-			var valid = ctrl.$isEmpty(value) || value.length === 10 || value.length === 11;
-			ctrl.$setValidity('brPhoneNumber', valid);
-			return value;
-		}
-	};
-}])
-.directive('uiBrPhoneNumber', ['PhoneValidators', function(PhoneValidators) {
+.directive('uiBrPhoneNumber', [function() {
 	/**
 	 * FIXME: all numbers will have 9 digits after 2016.
 	 * see http://portal.embratel.com.br/embratel/9-digito/
@@ -1258,22 +1322,15 @@ angular.module('ui.utils.masks.br.phone', [])
 	var phoneMask8D = new StringMask('(00) 0000-0000'),
 		phoneMask9D = new StringMask('(00) 00000-0000');
 
-	function clearValue (value) {
-		if(!value) {
-			return value;
-		}
-
+	function removeNonDigits(value) {
 		return value.replace(/[^0-9]/g, '');
 	}
 
-	function applyPhoneMask (value) {
-		if(!value) {
-			return value;
-		}
-
+	function applyPhoneMask(value) {
 		var formatedValue;
+
 		if(value.length < 11){
-			formatedValue = phoneMask8D.apply(value);
+			formatedValue = phoneMask8D.apply(value) || '';
 		}else{
 			formatedValue = phoneMask9D.apply(value);
 		}
@@ -1285,29 +1342,40 @@ angular.module('ui.utils.masks.br.phone', [])
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			ctrl.$formatters.push(function(value) {
-				return applyPhoneMask(PhoneValidators.brPhoneNumber(ctrl, value));
-			});
-
-			ctrl.$parsers.push(function(value) {
-				if (!value) {
+			function formatter(value) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
-				var cleanValue = clearValue(value);
-				var formatedValue = applyPhoneMask(cleanValue);
+				return applyPhoneMask(removeNonDigits(value));
+			}
+
+			function parser(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
+				}
+
+				var formatedValue = applyPhoneMask(removeNonDigits(value));
+				var actualValue = removeNonDigits(formatedValue);
 
 				if (ctrl.$viewValue !== formatedValue) {
 					ctrl.$setViewValue(formatedValue);
 					ctrl.$render();
 				}
 
-				return clearValue(formatedValue);
-			});
+				return actualValue;
+			}
 
-			ctrl.$parsers.push(function(value) {
-				return PhoneValidators.brPhoneNumber(ctrl, value);
-			});
+			function validator(value) {
+				var valid = ctrl.$isEmpty(value) || value.length === 10 || value.length === 11;
+				ctrl.$setValidity('brPhoneNumber', valid);
+				return value;
+			}
+
+			ctrl.$formatters.push(formatter);
+			ctrl.$formatters.push(validator);
+			ctrl.$parsers.push(parser);
+			ctrl.$parsers.push(validator);
 		}
 	};
 }]);
@@ -1892,7 +1960,7 @@ angular.module('ui.utils.masks.global.time', [])
 
 			function formatter (value) {
 				$log.debug('[uiTimeMask] Formatter called: ', value);
-				if(angular.isUndefined(value) || value.length === 0) {
+				if(ctrl.$isEmpty(value)) {
 					return value;
 				}
 
@@ -1909,8 +1977,8 @@ angular.module('ui.utils.masks.global.time', [])
 			function parser (value) {
 				$log.debug('[uiTimeMask] Parser called: ', value);
 
-				var modelValue = formatter(value);
-				var viewValue = modelValue;
+				var viewValue = formatter(value);
+				var modelValue = viewValue;
 
 				if(ctrl.$viewValue !== viewValue) {
 					ctrl.$setViewValue(viewValue);
