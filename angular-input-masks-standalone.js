@@ -1,3 +1,10 @@
+/**
+ * angular-input-masks
+ * Personalized input masks for AngularJS
+ * @version v1.5.2
+ * @link http://github.com/assisrafael/angular-input-masks
+ * @license MIT
+ */
 require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
  * br-validations
@@ -3949,14 +3956,6 @@ IErules.AP = [{
 }));
 
 },{}],4:[function(require,module,exports){
-/**
- * angular-input-masks
- * Personalized input masks for AngularJS
- * @version 1.5.1
- * @link http://github.com/assisrafael/angular-input-masks
- * @license MIT
- */
-
 module.exports = angular.module('ui.utils.masks', [
 	require('./global/global-masks'),
 	require('./br/br-masks'),
@@ -4348,11 +4347,11 @@ var moment = require('moment');
 var StringMask = require('string-mask');
 
 function DateMaskDirective($locale) {
-	var dateFormatMapByLocalle = {
+	var dateFormatMapByLocale = {
 		'pt-br': 'DD/MM/YYYY',
 	};
 
-	var dateFormat = dateFormatMapByLocalle[$locale.id] || 'YYYY-MM-DD';
+	var dateFormat = dateFormatMapByLocale[$locale.id] || 'YYYY-MM-DD';
 
 	return {
 		restrict: 'A',
