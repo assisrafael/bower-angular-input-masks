@@ -6,7 +6,7 @@
     "Igor Rafael <igor.rafael@gmail.com>"
   ],
   "description": "Personalized and localized input masks for AngularJS",
-  "main": "angular-input-masks.js",
+  "main": "angular-input-masks-standalone.min.js",
   "keywords": [
     "angular",
     "input",
@@ -14,8 +14,8 @@
   ],
   "dependencies": {
     "angular": "~1.2.9",
-    "br-validations": "~0.2.3",
-    "string-mask": "~0.1.1"
+    "br-validations": "~0.2.4",
+    "string-mask": "~0.2.0"
   },
   "license": "MIT",
   "ignore": [
