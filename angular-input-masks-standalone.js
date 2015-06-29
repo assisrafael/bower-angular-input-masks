@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v1.5.2
+ * @version v2.0.0
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -3962,14 +3962,13 @@ module.exports = angular.module('ui.utils.masks', [
 	require('./us/us-masks')
 ]).name;
 
-},{"./br/br-masks":6,"./global/global-masks":13,"./us/us-masks":21}],5:[function(require,module,exports){
+},{"./br/br-masks":6,"./global/global-masks":15,"./us/us-masks":23}],5:[function(require,module,exports){
 var StringMask = require('string-mask');
 var maskFactory = require('mask-factory');
 
 var boletoBancarioMask = new StringMask('00000.00000 00000.000000 00000.000000 0 00000000000000');
 
 module.exports = maskFactory({
-	validationErrorKey: 'brBoletoBancario',
 	clearValue: function(rawValue) {
 		return rawValue.replace(/[^0-9]/g, '').slice(0, 47);
 	},
@@ -3980,40 +3979,45 @@ module.exports = maskFactory({
 
 		return boletoBancarioMask.apply(cleanValue).replace(/[^0-9]$/, '');
 	},
-	validate: function(value) {
-		return value.length === 47;
+	validations: {
+		brBoletoBancario: function(value) {
+			return value.length === 47;
+		}
 	}
 });
 
 },{"mask-factory":"mask-factory","string-mask":3}],6:[function(require,module,exports){
 var m = angular.module('ui.utils.masks.br', [
 	require('../helpers'),
-	require('./cpf-cnpj/cpf-cnpj')
 ])
 .directive('uiBrBoletoBancarioMask', require('./boleto-bancario/boleto-bancario'))
 .directive('uiBrCepMask', require('./cep/cep'))
+.directive('uiBrCnpjMask', require('./cnpj/cnpj'))
+.directive('uiBrCpfMask', require('./cpf/cpf'))
+.directive('uiBrCpfcnpjMask', require('./cpf-cnpj/cpf-cnpj'))
 .directive('uiBrIeMask', require('./inscricao-estadual/ie'))
 .directive('uiNfeAccessKeyMask', require('./nfe/nfe'))
 .directive('uiBrPhoneNumber', require('./phone/br-phone'));
 
 module.exports = m.name;
 
-},{"../helpers":19,"./boleto-bancario/boleto-bancario":5,"./cep/cep":7,"./cpf-cnpj/cpf-cnpj":8,"./inscricao-estadual/ie":9,"./nfe/nfe":10,"./phone/br-phone":11}],7:[function(require,module,exports){
+},{"../helpers":21,"./boleto-bancario/boleto-bancario":5,"./cep/cep":7,"./cnpj/cnpj":8,"./cpf-cnpj/cpf-cnpj":9,"./cpf/cpf":10,"./inscricao-estadual/ie":11,"./nfe/nfe":12,"./phone/br-phone":13}],7:[function(require,module,exports){
 var StringMask = require('string-mask');
 var maskFactory = require('mask-factory');
 
 var cepMask = new StringMask('00000-000');
 
 module.exports = maskFactory({
-	validationErrorKey: 'cep',
 	clearValue: function(rawValue) {
 		return rawValue.replace(/[^0-9]/g, '').slice(0, 8);
 	},
 	format: function(cleanValue) {
 		return (cepMask.apply(cleanValue) || '').replace(/[^0-9]$/, '');
 	},
-	validate: function(value) {
-		return value.length === 8;
+	validations: {
+		cep: function(value) {
+			return value.length === 8;
+		}
 	}
 });
 
@@ -4023,124 +4027,76 @@ var BrV = require('br-validations');
 var maskFactory = require('mask-factory');
 
 var cnpjPattern = new StringMask('00.000.000\/0000-00');
-var cpfPattern = new StringMask('000.000.000-00');
 
-function validateCPF(ctrl, value) {
-	var valid = ctrl.$isEmpty(value) || BrV.cpf.validate(value);
-	ctrl.$setValidity('cpf', valid);
-	return value;
-}
-
-function validateCNPJ(ctrl, value) {
-	var valid = ctrl.$isEmpty(value) || BrV.cnpj.validate(value);
-	ctrl.$setValidity('cnpj', valid);
-	return value;
-}
-
-function validateCPForCNPJ(ctrl, value) {
-	if(!value || value.length <= 11) {
-		validateCNPJ(ctrl, '');
-		return validateCPF(ctrl, value);
-	}else {
-		validateCPF(ctrl, '');
-		return validateCNPJ(ctrl, value);
-	}
-}
-
-function removeNonDigits(value) {
-	return value.replace(/[^\d]/g, '');
-}
-
-var uiBrCpfMask = maskFactory({
-	validationErrorKey: 'cpf',
-	clearValue: function(rawValue) {
-		return rawValue.replace(/[^\d]/g, '').slice(0, 11);
-	},
-	format: function(cleanValue) {
-		return (cpfPattern.apply(cleanValue) || '').trim().replace(/[^0-9]$/, '');
-	},
-	validate: function(value) {
-		return BrV.cpf.validate(value);
-	}
-});
-
-var uiBrCnpjMask = maskFactory({
-	validationErrorKey: 'cnpj',
+module.exports = maskFactory({
 	clearValue: function(rawValue) {
 		return rawValue.replace(/[^\d]/g, '').slice(0, 14);
 	},
 	format: function(cleanValue) {
 		return (cnpjPattern.apply(cleanValue) || '').trim().replace(/[^0-9]$/, '');
 	},
-	validate: function(value) {
-		return BrV.cnpj.validate(value);
+	validations: {
+		cnpj: function(value) {
+			return BrV.cnpj.validate(value);
+		}
 	}
 });
 
-function uiBrCpfCnpjMask() {
-	function applyCpfCnpjMask(value) {
-		var formatedValue;
-		if (value.length > 11) {
-			formatedValue = cnpjPattern.apply(value);
-		} else {
-			formatedValue = cpfPattern.apply(value) || '';
-		}
-		return formatedValue.trim().replace(/[^0-9]$/, '');
-	}
-
-	return {
-		restrict: 'A',
-		require: 'ngModel',
-		link: function (scope, element, attrs, ctrl) {
-			function formatter(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				return applyCpfCnpjMask(removeNonDigits(value));
-			}
-
-			function parser(value) {
-				if (ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var formatedValue = applyCpfCnpjMask(removeNonDigits(value));
-				var actualNumber = removeNonDigits(formatedValue);
-
-				if (ctrl.$viewValue !== formatedValue) {
-					ctrl.$setViewValue(formatedValue);
-					ctrl.$render();
-				}
-
-				return actualNumber;
-			}
-
-			function validator(value) {
-				return validateCPForCNPJ(ctrl, value);
-			}
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
-			ctrl.$parsers.push(validator);
-		}
-	};
-}
-
-var m = angular.module('ui.utils.masks.br.cpfCnpj', [])
-.directive('uiBrCpfMask', [uiBrCpfMask])
-.directive('uiBrCnpjMask', [uiBrCnpjMask])
-.directive('uiBrCpfcnpjMask', [uiBrCpfCnpjMask])
-// deprecated: will be removed in the next major version
-.directive('uiCpfMask', [uiBrCpfMask])
-// deprecated: will be removed in the next major version
-.directive('uiCnpjMask', [uiBrCnpjMask])
-// deprecated: will be removed in the next major version
-.directive('uiCpfcnpjMask', [uiBrCpfCnpjMask]);
-
-module.exports = m.name;
-
 },{"br-validations":1,"mask-factory":"mask-factory","string-mask":3}],9:[function(require,module,exports){
+var StringMask = require('string-mask');
+var BrV = require('br-validations');
+var maskFactory = require('mask-factory');
+
+var cnpjPattern = new StringMask('00.000.000\/0000-00');
+var cpfPattern = new StringMask('000.000.000-00');
+
+module.exports = maskFactory({
+	clearValue: function(rawValue) {
+		return rawValue.replace(/[^\d]/g, '').slice(0, 14);
+	},
+	format: function(cleanValue) {
+		var formatedValue;
+
+		if (cleanValue.length > 11) {
+			formatedValue = cnpjPattern.apply(cleanValue);
+		} else {
+			formatedValue = cpfPattern.apply(cleanValue) || '';
+		}
+
+		return formatedValue.trim().replace(/[^0-9]$/, '');
+	},
+	validations: {
+		cpf: function(value) {
+			return value.length > 11 || BrV.cpf.validate(value);
+		},
+		cnpj: function(value) {
+			return value.length <= 11 || BrV.cnpj.validate(value);
+		}
+	}
+});
+
+},{"br-validations":1,"mask-factory":"mask-factory","string-mask":3}],10:[function(require,module,exports){
+var StringMask = require('string-mask');
+var BrV = require('br-validations');
+var maskFactory = require('mask-factory');
+
+var cpfPattern = new StringMask('000.000.000-00');
+
+module.exports = maskFactory({
+	clearValue: function(rawValue) {
+		return rawValue.replace(/[^\d]/g, '').slice(0, 11);
+	},
+	format: function(cleanValue) {
+		return (cpfPattern.apply(cleanValue) || '').trim().replace(/[^0-9]$/, '');
+	},
+	validations: {
+		cpf: function(value) {
+			return BrV.cpf.validate(value);
+		}
+	}
+});
+
+},{"br-validations":1,"mask-factory":"mask-factory","string-mask":3}],11:[function(require,module,exports){
 var StringMask = require('string-mask');
 var BrV = require('br-validations');
 
@@ -4227,8 +4183,7 @@ function BrIeMaskDirective($parse) {
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			var state = $parse(attrs.uiBrIeMask)(scope) || '';
-			state = state.toUpperCase();
+			var state = ($parse(attrs.uiBrIeMask)(scope) || '').toUpperCase();
 
 			function formatter(value) {
 				if (ctrl.$isEmpty(value)) {
@@ -4258,24 +4213,18 @@ function BrIeMaskDirective($parse) {
 				return actualValue;
 			}
 
-			function validator(value) {
-				var isValid = ctrl.$isEmpty(value) || BrV.ie(state).validate(value);
-				ctrl.$setValidity('ie', isValid);
-
-				return value;
-			}
-
 			ctrl.$formatters.push(formatter);
-			ctrl.$formatters.push(validator);
 			ctrl.$parsers.push(parser);
-			ctrl.$parsers.push(validator);
+
+			ctrl.$validators.ie = function validator(modelValue) {
+				return ctrl.$isEmpty(modelValue) || BrV.ie(state).validate(modelValue);
+			};
 
 			scope.$watch(attrs.uiBrIeMask, function(newState) {
-				state = newState || '';
-				state = state.toUpperCase();
+				state = (newState || '').toUpperCase();
 
 				parser(ctrl.$viewValue);
-				validator(ctrl.$viewValue);
+				ctrl.$validate();
 			});
 		}
 	};
@@ -4284,7 +4233,7 @@ BrIeMaskDirective.$inject = ['$parse'];
 
 module.exports = BrIeMaskDirective;
 
-},{"br-validations":1,"string-mask":3}],10:[function(require,module,exports){
+},{"br-validations":1,"string-mask":3}],12:[function(require,module,exports){
 var StringMask = require('string-mask');
 var maskFactory = require('mask-factory');
 
@@ -4292,19 +4241,20 @@ var nfeAccessKeyMask = new StringMask('0000 0000 0000 0000 0000' +
 	' 0000 0000 0000 0000 0000 0000');
 
 module.exports = maskFactory({
-	validationErrorKey: 'nfeAccessKey',
 	clearValue: function(rawValue) {
 		return rawValue.replace(/[^0-9]/g, '').slice(0, 44);
 	},
 	format: function(cleanValue) {
 		return (nfeAccessKeyMask.apply(cleanValue) || '').replace(/[^0-9]$/, '');
 	},
-	validate: function(value) {
-		return value.length === 44;
+	validations: {
+		nfeAccessKey: function(value) {
+			return value.length === 44;
+		}
 	}
 });
 
-},{"mask-factory":"mask-factory","string-mask":3}],11:[function(require,module,exports){
+},{"mask-factory":"mask-factory","string-mask":3}],13:[function(require,module,exports){
 var StringMask = require('string-mask');
 var maskFactory = require('mask-factory');
 
@@ -4316,7 +4266,6 @@ var phoneMask8D = new StringMask('(00) 0000-0000'),
 	phoneMask9D = new StringMask('(00) 00000-0000');
 
 module.exports = maskFactory({
-	validationErrorKey: 'brPhoneNumber',
 	clearValue: function(rawValue) {
 		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 11);
 	},
@@ -4336,13 +4285,15 @@ module.exports = maskFactory({
 
 		return originalModelType === 'number' ? parseInt(cleanValue) : cleanValue;
 	},
-	validate: function(value) {
-		var valueLength = value && value.toString().length;
-		return valueLength === 10 || valueLength === 11;
+	validations: {
+		brPhoneNumber: function(value) {
+			var valueLength = value && value.toString().length;
+			return valueLength === 10 || valueLength === 11;
+		}
 	}
 });
 
-},{"mask-factory":"mask-factory","string-mask":3}],12:[function(require,module,exports){
+},{"mask-factory":"mask-factory","string-mask":3}],14:[function(require,module,exports){
 var moment = require('moment');
 var StringMask = require('string-mask');
 
@@ -4359,49 +4310,46 @@ function DateMaskDirective($locale) {
 		link: function(scope, element, attrs, ctrl) {
 			var dateMask = new StringMask(dateFormat.replace(/[YMD]/g,'0'));
 
-			function applyMask (value) {
-				var cleanValue = value.replace(/[^0-9]/g, '');
-				var formatedValue = dateMask.process(cleanValue).result || '';
+			function formatter(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
+				}
+
+				var cleanValue = value;
+				if (typeof value === 'object') {
+					cleanValue = moment(value).format(dateFormat);
+				}
+
+				cleanValue = cleanValue.replace(/[^0-9]/g, '');
+				var formatedValue = dateMask.apply(cleanValue) || '';
 
 				return formatedValue.trim().replace(/[^0-9]$/, '');
 			}
 
-			function formatter (value) {
-				if(ctrl.$isEmpty(value)) {
+			ctrl.$formatters.push(formatter);
+
+			ctrl.$parsers.push(function parser(value) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
-				var formatedValue = applyMask(moment(value).format(dateFormat));
-				validator(formatedValue);
-				return formatedValue;
-			}
-
-			function parser(value) {
-				if(ctrl.$isEmpty(value)) {
-					validator(value);
-					return value;
-				}
-
-				var formatedValue = applyMask(value);
+				var formatedValue = formatter(value);
 
 				if (ctrl.$viewValue !== formatedValue) {
 					ctrl.$setViewValue(formatedValue);
 					ctrl.$render();
 				}
-				validator(formatedValue);
 
-				var modelValue = moment(formatedValue, dateFormat);
-				return modelValue.toDate();
-			}
+				return moment(formatedValue, dateFormat).toDate();
+			});
 
-			function validator(value) {
-				var isValid = moment(value, dateFormat).isValid() &&
-					value.length === dateFormat.length;
-				ctrl.$setValidity('date', ctrl.$isEmpty(value) || isValid);
-			}
+			ctrl.$validators.date =	function validator(modelValue, viewValue) {
+				if (ctrl.$isEmpty(modelValue)) {
+					return true;
+				}
 
-			ctrl.$formatters.push(formatter);
-			ctrl.$parsers.push(parser);
+				return moment(viewValue, dateFormat).isValid() && viewValue.length === dateFormat.length;
+			};
 		}
 	};
 }
@@ -4409,7 +4357,7 @@ DateMaskDirective.$inject = ['$locale'];
 
 module.exports = DateMaskDirective;
 
-},{"moment":2,"string-mask":3}],13:[function(require,module,exports){
+},{"moment":2,"string-mask":3}],15:[function(require,module,exports){
 var m = angular.module('ui.utils.masks.global', [
 	require('../helpers'),
 ])
@@ -4422,10 +4370,11 @@ var m = angular.module('ui.utils.masks.global', [
 
 module.exports = m.name;
 
-},{"../helpers":19,"./date/date":12,"./money/money":14,"./number/number":15,"./percentage/percentage":16,"./scientific-notation/scientific-notation":17,"./time/time":18}],14:[function(require,module,exports){
+},{"../helpers":21,"./date/date":14,"./money/money":16,"./number/number":17,"./percentage/percentage":18,"./scientific-notation/scientific-notation":19,"./time/time":20}],16:[function(require,module,exports){
 var StringMask = require('string-mask');
+var validators = require('validators');
 
-function MoneyMaskDirective($locale, $parse, PreFormatters, NumberValidators) {
+function MoneyMaskDirective($locale, $parse, PreFormatters) {
 	return {
 		restrict: 'A',
 		require: 'ngModel',
@@ -4435,6 +4384,12 @@ function MoneyMaskDirective($locale, $parse, PreFormatters, NumberValidators) {
 				currencySym = $locale.NUMBER_FORMATS.CURRENCY_SYM,
 				decimals = $parse(attrs.uiMoneyMask)(scope);
 
+			function maskFactory(decimals) {
+					var decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
+					var maskPattern = currencySym + ' #' + thousandsDelimiter + '##0' + decimalsPattern;
+					return new StringMask(maskPattern, {reverse: true});
+			}
+
 			if (angular.isDefined(attrs.uiHideGroupSep)){
 				thousandsDelimiter = '';
 			}
@@ -4443,12 +4398,10 @@ function MoneyMaskDirective($locale, $parse, PreFormatters, NumberValidators) {
 				decimals = 2;
 			}
 
-			var decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
-			var maskPattern = currencySym+' #'+thousandsDelimiter+'##0'+decimalsPattern;
-			var moneyMask = new StringMask(maskPattern, {reverse: true});
+			var moneyMask = maskFactory(decimals);
 
 			function formatter(value) {
-				if(ctrl.$isEmpty(value)) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
@@ -4477,48 +4430,50 @@ function MoneyMaskDirective($locale, $parse, PreFormatters, NumberValidators) {
 			ctrl.$parsers.push(parser);
 
 			if (attrs.uiMoneyMask) {
-				scope.$watch(attrs.uiMoneyMask, function(decimals) {
-					if(isNaN(decimals)) {
-						decimals = 2;
-					}
-					decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
-					maskPattern = currencySym+' #'+thousandsDelimiter+'##0'+decimalsPattern;
-					moneyMask = new StringMask(maskPattern, {reverse: true});
+				scope.$watch(attrs.uiMoneyMask, function(_decimals) {
+					decimals = isNaN(_decimals) ? 2 : _decimals;
+					moneyMask = maskFactory(decimals);
 
 					parser(ctrl.$viewValue);
 				});
 			}
 
-			if(attrs.min){
-				ctrl.$parsers.push(function(value) {
-					var min = $parse(attrs.min)(scope);
-					return NumberValidators.minNumber(ctrl, value, min);
-				});
+			if (attrs.min) {
+				var minVal;
+
+				ctrl.$validators.min = function(modelValue) {
+					return validators.minNumber(ctrl, modelValue, minVal);
+				};
 
 				scope.$watch(attrs.min, function(value) {
-					NumberValidators.minNumber(ctrl, ctrl.$modelValue, value);
+					minVal = value;
+					ctrl.$validate();
 				});
 			}
 
-			if(attrs.max) {
-				ctrl.$parsers.push(function(value) {
-					var max = $parse(attrs.max)(scope);
-					return NumberValidators.maxNumber(ctrl, value, max);
-				});
+			if (attrs.max) {
+				var maxVal;
+				
+				ctrl.$validators.max = function(modelValue) {
+					return validators.maxNumber(ctrl, modelValue, maxVal);
+				};
 
 				scope.$watch(attrs.max, function(value) {
-					NumberValidators.maxNumber(ctrl, ctrl.$modelValue, value);
+					maxVal = value;
+					ctrl.$validate();
 				});
 			}
 		}
 	};
 }
-MoneyMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberValidators'];
+MoneyMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters'];
 
 module.exports = MoneyMaskDirective;
 
-},{"string-mask":3}],15:[function(require,module,exports){
-function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks, NumberValidators) {
+},{"string-mask":3,"validators":"validators"}],17:[function(require,module,exports){
+var validators = require('validators');
+
+function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 	return {
 		restrict: 'A',
 		require: 'ngModel',
@@ -4547,13 +4502,13 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks, Number
 				var formatedValue = viewMask.apply(valueToFormat);
 				var actualNumber = parseFloat(modelMask.apply(valueToFormat));
 
-				if(angular.isDefined(attrs.uiNegativeNumber)){
+				if (angular.isDefined(attrs.uiNegativeNumber)) {
 					var isNegative = (value[0] === '-'),
 						needsToInvertSign = (value.slice(-1) === '-');
 
 					//only apply the minus sign if it is negative or(exclusive)
 					//needs to be negative and the number is different from zero
-					if(needsToInvertSign ^ isNegative && !!actualNumber) {
+					if (needsToInvertSign ^ isNegative && !!actualNumber) {
 						actualNumber *= -1;
 						formatedValue = '-' + formatedValue;
 					}
@@ -4568,15 +4523,11 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks, Number
 			}
 
 			function formatter(value) {
-				if(ctrl.$isEmpty(value)) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
-				var prefix = '';
-				if(angular.isDefined(attrs.uiNegativeNumber) && value < 0){
-					prefix = '-';
-				}
-
+				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value < 0) ? '-' : '';
 				var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
 				return prefix + viewMask.apply(valueToFormat);
 			}
@@ -4585,10 +4536,8 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks, Number
 			ctrl.$parsers.push(parser);
 
 			if (attrs.uiNumberMask) {
-				scope.$watch(attrs.uiNumberMask, function(decimals) {
-					if(isNaN(decimals)) {
-						decimals = 2;
-					}
+				scope.$watch(attrs.uiNumberMask, function(_decimals) {
+					decimals = isNaN(_decimals) ? 2 : _decimals;
 					viewMask = NumberMasks.viewMask(decimals, decimalDelimiter, thousandsDelimiter);
 					modelMask = NumberMasks.modelMask(decimals);
 
@@ -4596,37 +4545,43 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks, Number
 				});
 			}
 
-			if(attrs.min){
-				ctrl.$parsers.push(function(value) {
-					var min = $parse(attrs.min)(scope);
-					return NumberValidators.minNumber(ctrl, value, min);
-				});
+			if (attrs.min) {
+				var minVal;
+
+				ctrl.$validators.min = function(modelValue) {
+					return validators.minNumber(ctrl, modelValue, minVal);
+				};
 
 				scope.$watch(attrs.min, function(value) {
-					NumberValidators.minNumber(ctrl, ctrl.$modelValue, value);
+					minVal = value;
+					ctrl.$validate();
 				});
 			}
 
-			if(attrs.max) {
-				ctrl.$parsers.push(function(value) {
-					var max = $parse(attrs.max)(scope);
-					return NumberValidators.maxNumber(ctrl, value, max);
-				});
+			if (attrs.max) {
+				var maxVal;
+
+				ctrl.$validators.max = function(modelValue) {
+					return validators.maxNumber(ctrl, modelValue, maxVal);
+				};
 
 				scope.$watch(attrs.max, function(value) {
-					NumberValidators.maxNumber(ctrl, ctrl.$modelValue, value);
+					maxVal = value;
+					ctrl.$validate();
 				});
 			}
 		}
 	};
 }
-NumberMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberMasks', 'NumberValidators'];
+NumberMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberMasks'];
 
 module.exports = NumberMaskDirective;
 
-},{}],16:[function(require,module,exports){
-function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks, NumberValidators) {
-	function preparePercentageToFormatter (value, decimals, modelMultiplier) {
+},{"validators":"validators"}],18:[function(require,module,exports){
+var validators = require('validators');
+
+function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
+	function preparePercentageToFormatter(value, decimals, modelMultiplier) {
 		return PreFormatters.clearDelimitersAndLeadingZeros((parseFloat(value)*modelMultiplier).toFixed(decimals));
 	}
 
@@ -4640,7 +4595,7 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks, Nu
 
 			var modelValue = {
 				multiplier : 100,
-				decimalMask: 2 
+				decimalMask: 2
 			};
 
 			if (angular.isDefined(attrs.uiHideGroupSep)){
@@ -4661,7 +4616,7 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks, Nu
 				modelMask = NumberMasks.modelMask(numberDecimals);
 
 			function formatter(value) {
-				if(ctrl.$isEmpty(value)) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
@@ -4670,12 +4625,12 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks, Nu
 			}
 
 			function parse(value) {
-				if(ctrl.$isEmpty(value)) {
+				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
-				if(value.length > 1 && value.indexOf('%') === -1) {
+				if (value.length > 1 && value.indexOf('%') === -1) {
 					valueToFormat = valueToFormat.slice(0,valueToFormat.length-1);
 				}
 				var formatedValue = viewMask.apply(valueToFormat) + ' %';
@@ -4693,11 +4648,9 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks, Nu
 			ctrl.$parsers.push(parse);
 
 			if (attrs.uiPercentageMask) {
-				scope.$watch(attrs.uiPercentageMask, function(decimals) {
-					if(isNaN(decimals)) {
-						decimals = 2;
-					}
-					
+				scope.$watch(attrs.uiPercentageMask, function(_decimals) {
+					decimals = isNaN(_decimals) ? 2 : _decimals;
+
 					if (angular.isDefined(attrs.uiPercentageValue)) {
 						modelValue.multiplier  = 1;
 						modelValue.decimalMask = 0;
@@ -4711,45 +4664,49 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks, Nu
 				});
 			}
 
-			if(attrs.min){
-				ctrl.$parsers.push(function(value) {
-					var min = $parse(attrs.min)(scope);
-					return NumberValidators.minNumber(ctrl, value, min);
-				});
+			if (attrs.min) {
+				var minVal;
 
-				scope.$watch('min', function(value) {
-					NumberValidators.minNumber(ctrl, ctrl.$modelValue, value);
+				ctrl.$validators.min = function(modelValue) {
+					return validators.minNumber(ctrl, modelValue, minVal);
+				};
+
+				scope.$watch(attrs.min, function(value) {
+					minVal = value;
+					ctrl.$validate();
 				});
 			}
 
-			if(attrs.max) {
-				ctrl.$parsers.push(function(value) {
-					var max = $parse(attrs.max)(scope);
-					return NumberValidators.maxNumber(ctrl, value, max);
-				});
+			if (attrs.max) {
+				var maxVal;
 
-				scope.$watch('max', function(value) {
-					NumberValidators.maxNumber(ctrl, ctrl.$modelValue, value);
+				ctrl.$validators.max = function(modelValue) {
+					return validators.maxNumber(ctrl, modelValue, maxVal);
+				};
+
+				scope.$watch(attrs.max, function(value) {
+					maxVal = value;
+					ctrl.$validate();
 				});
 			}
 		}
 	};
 }
-PercentageMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberMasks', 'NumberValidators'];
+PercentageMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberMasks'];
 
 module.exports = PercentageMaskDirective;
 
-},{}],17:[function(require,module,exports){
+},{"validators":"validators"}],19:[function(require,module,exports){
 var StringMask = require('string-mask');
 
 function ScientificNotationMaskDirective($locale, $parse) {
 	var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 		defaultPrecision = 2;
 
-	function significandMaskBuilder (decimals) {
+	function significandMaskBuilder(decimals) {
 		var mask = '0';
 
-		if(decimals > 0) {
+		if (decimals > 0) {
 			mask += decimalDelimiter;
 			for (var i = 0; i < decimals; i++) {
 				mask += '0';
@@ -4767,7 +4724,7 @@ function ScientificNotationMaskDirective($locale, $parse) {
 		link: function(scope, element, attrs, ctrl) {
 			var decimals = $parse(attrs.uiScientificNotationMask)(scope);
 
-			if(isNaN(decimals)) {
+			if (isNaN(decimals)) {
 				decimals = defaultPrecision;
 			}
 
@@ -4846,20 +4803,12 @@ function ScientificNotationMaskDirective($locale, $parse) {
 				return modelValue;
 			}
 
-			function validator (value) {
-				if(ctrl.$isEmpty(value)) {
-					return value;
-				}
-
-				var isMaxValid = value < Number.MAX_VALUE;
-				ctrl.$setValidity('max', isMaxValid);
-				return value;
-			}
-
 			ctrl.$formatters.push(formatter);
-			ctrl.$formatters.push(validator);
 			ctrl.$parsers.push(parser);
-			ctrl.$parsers.push(validator);
+
+			ctrl.$validators.max = function validator (value) {
+				return ctrl.$isEmpty(value) || value < Number.MAX_VALUE;
+			};
 		}
 	};
 }
@@ -4867,46 +4816,40 @@ ScientificNotationMaskDirective.$inject = ['$locale', '$parse'];
 
 module.exports = ScientificNotationMaskDirective;
 
-},{"string-mask":3}],18:[function(require,module,exports){
+},{"string-mask":3}],20:[function(require,module,exports){
 var StringMask = require('string-mask');
 
-function TimeMaskDirective() {
+module.exports = function TimeMaskDirective() {
 	return {
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
-			var unformattedValueLength = 6,
-				formattedValueLength = 8,
-				timeFormat = '00:00:00';
+			var timeFormat = '00:00:00';
 
 			if (angular.isDefined(attrs.uiTimeMask) && attrs.uiTimeMask === 'short') {
-				unformattedValueLength = 4;
-				formattedValueLength = 5;
 				timeFormat = '00:00';
 			}
 
+			var formattedValueLength = timeFormat.length;
+			var unformattedValueLength = timeFormat.replace(':', '').length;
 			var timeMask = new StringMask(timeFormat);
-
-			function clearValue(value) {
-				return value.replace(/[^0-9]/g, '').slice(0, unformattedValueLength);
-			}
 
 			function formatter(value) {
 				if (ctrl.$isEmpty(value)) {
 					return value;
 				}
 
-				var cleanValue = clearValue(value);
-
-				if (cleanValue.length === 0) {
-					return '';
-				}
-
-				var formattedValue = timeMask.process(cleanValue).result;
-				return formattedValue.replace(/[^0-9]$/, '');
+				var cleanValue = value.replace(/[^0-9]/g, '').slice(0, unformattedValueLength) || '';
+				return (timeMask.apply(cleanValue) || '').replace(/[^0-9]$/, '');
 			}
 
-			function parser (value) {
+			ctrl.$formatters.push(formatter);
+
+			ctrl.$parsers.push(function parser(value) {
+				if (ctrl.$isEmpty(value)) {
+					return value;
+				}
+
 				var viewValue = formatter(value);
 				var modelValue = viewValue;
 
@@ -4916,14 +4859,14 @@ function TimeMaskDirective() {
 				}
 
 				return modelValue;
-			}
+			});
 
-			function validator (value) {
-				if (angular.isUndefined(value)) {
-					return value;
+			ctrl.$validators.time = function (modelValue) {
+				if (ctrl.$isEmpty(modelValue)) {
+					return true;
 				}
 
-				var splittedValue = value.toString().split(/:/).filter(function(v) {
+				var splittedValue = modelValue.toString().split(/:/).filter(function(v) {
 					return !!v;
 				});
 
@@ -4931,24 +4874,14 @@ function TimeMaskDirective() {
 					minutes = parseInt(splittedValue[1]),
 					seconds = parseInt(splittedValue[2] || 0);
 
-				var isValid = value.toString().length === formattedValueLength &&
+				return modelValue.toString().length === formattedValueLength &&
 					hours < 24 && minutes < 60 && seconds < 60;
-
-				ctrl.$setValidity('time', ctrl.$isEmpty(value) || isValid);
-				return value;
-			}
-
-			ctrl.$formatters.push(formatter);
-			ctrl.$formatters.push(validator);
-			ctrl.$parsers.push(parser);
-			ctrl.$parsers.push(validator);
+			};
 		}
 	};
-}
+};
 
-module.exports = TimeMaskDirective;
-
-},{"string-mask":3}],19:[function(require,module,exports){
+},{"string-mask":3}],21:[function(require,module,exports){
 var StringMask = require('string-mask');
 
 var m = angular.module('ui.utils.masks.helpers', []);
@@ -5020,7 +4953,7 @@ m.factory('PreFormatters', [function(){
 	};
 }]);
 
-},{"string-mask":3}],20:[function(require,module,exports){
+},{"string-mask":3}],22:[function(require,module,exports){
 var StringMask = require('string-mask');
 var maskFactory = require('mask-factory');
 
@@ -5028,7 +4961,6 @@ var phoneMaskUS = new StringMask('(000) 000-0000'),
 	phoneMaskINTL = new StringMask('+00-00-000-000000');
 
 module.exports = maskFactory({
-	validationErrorKey: 'usPhoneNumber',
 	clearValue: function(rawValue) {
 		return rawValue.toString().replace(/[^0-9]/g, '');
 	},
@@ -5043,12 +4975,14 @@ module.exports = maskFactory({
 
 		return formattedValue.trim().replace(/[^0-9]$/, '');
 	},
-	validate: function(value) {
-		return value.length > 9;
+	validations: {
+		usPhoneNumber: function(value) {
+			return value.length > 9;
+		}
 	}
 });
 
-},{"mask-factory":"mask-factory","string-mask":3}],21:[function(require,module,exports){
+},{"mask-factory":"mask-factory","string-mask":3}],23:[function(require,module,exports){
 var m = angular.module('ui.utils.masks.us', [
 	require('../helpers')
 ])
@@ -5056,23 +4990,23 @@ var m = angular.module('ui.utils.masks.us', [
 
 module.exports = m.name;
 
-},{"../helpers":19,"./phone/us-phone":20}],"mask-factory":[function(require,module,exports){
+},{"../helpers":21,"./phone/us-phone":22}],"mask-factory":[function(require,module,exports){
 module.exports = function maskFactory(maskDefinition) {
 	return function MaskDirective() {
 		return {
 			restrict: 'A',
 			require: 'ngModel',
 			link: function(scope, element, attrs, ctrl) {
-				function formatter(value) {
+				ctrl.$formatters.push(function formatter(value) {
 					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
 
 					var cleanValue = maskDefinition.clearValue(value);
 					return maskDefinition.format(cleanValue);
-				}
+				});
 
-				function parser(value) {
+				ctrl.$parsers.push(function parser(value) {
 					if (ctrl.$isEmpty(value)) {
 						return value;
 					}
@@ -5091,22 +5025,28 @@ module.exports = function maskFactory(maskDefinition) {
 
 					var actualModelType = typeof ctrl.$modelValue;
 					return maskDefinition.getModelValue(formattedValue, actualModelType);
-				}
+				});
 
-				function validator(value) {
-					var isValid = ctrl.$isEmpty(value) || maskDefinition.validate(value);
-					ctrl.$setValidity(maskDefinition.validationErrorKey, isValid);
-
-					return value;
-				}
-
-				ctrl.$formatters.push(formatter);
-				ctrl.$formatters.push(validator);
-				ctrl.$parsers.push(parser);
-				ctrl.$parsers.push(validator);
+				angular.forEach(maskDefinition.validations, function(validatorFn, validationErrorKey) {
+					ctrl.$validators[validationErrorKey] = function validator(modelValue, viewValue) {
+						return ctrl.$isEmpty(modelValue) || validatorFn(modelValue, viewValue);
+					};
+				});
 			}
 		};
 	};
+};
+
+},{}],"validators":[function(require,module,exports){
+module.exports = {
+	maxNumber: function(ctrl, value, limit) {
+		var max = parseFloat(limit, 10);
+		return ctrl.$isEmpty(value) || isNaN(max)|| value <= max;
+	},
+	minNumber: function(ctrl, value, limit) {
+		var min = parseFloat(limit, 10);
+		return ctrl.$isEmpty(value) || isNaN(min) || value >= min;
+	}
 };
 
 },{}]},{},[4]);
