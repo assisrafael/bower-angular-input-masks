@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.1.0
+ * @version v2.1.1
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -225,7 +225,7 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 
 			function parser(value) {
 				if(ctrl.$isEmpty(value)) {
-					return value;
+					return null;
 				}
 
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
@@ -356,7 +356,7 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 
 			function parse(value) {
 				if (ctrl.$isEmpty(value)) {
-					return value;
+					return null;
 				}
 
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
@@ -620,9 +620,12 @@ module.exports = m.name;
 
 m.factory('PreFormatters', [function(){
 	function clearDelimitersAndLeadingZeros(value) {
+		if (value === '0') {
+			return '0';
+		}
+
 		var cleanValue = value.replace(/^-/,'').replace(/^0*/, '');
-		cleanValue = cleanValue.replace(/[^0-9]/g, '');
-		return cleanValue;
+		return cleanValue.replace(/[^0-9]/g, '');
 	}
 
 	function prepareNumberToFormatter (value, decimals) {

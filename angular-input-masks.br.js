@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.1.0
+ * @version v2.1.1
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -312,7 +312,8 @@ var maskFactory = require('mask-factory');
  * see http://portal.embratel.com.br/embratel/9-digito/
  */
 var phoneMask8D = new StringMask('(00) 0000-0000'),
-	phoneMask9D = new StringMask('(00) 00000-0000');
+	phoneMask9D = new StringMask('(00) 00000-0000'),
+	phoneMask0800 = new StringMask('0000-000-0000');
 
 module.exports = maskFactory({
 	clearValue: function(rawValue) {
@@ -320,8 +321,9 @@ module.exports = maskFactory({
 	},
 	format: function(cleanValue) {
 		var formatedValue;
-
-		if(cleanValue.length < 11){
+		if(cleanValue.indexOf('0800') === 0) {
+			formatedValue = phoneMask0800.apply(cleanValue);
+		}else if(cleanValue.length < 11){
 			formatedValue = phoneMask8D.apply(cleanValue) || '';
 		}else{
 			formatedValue = phoneMask9D.apply(cleanValue);
@@ -556,7 +558,7 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 
 			function parser(value) {
 				if(ctrl.$isEmpty(value)) {
-					return value;
+					return null;
 				}
 
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
@@ -687,7 +689,7 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 
 			function parse(value) {
 				if (ctrl.$isEmpty(value)) {
-					return value;
+					return null;
 				}
 
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
@@ -951,9 +953,12 @@ module.exports = m.name;
 
 m.factory('PreFormatters', [function(){
 	function clearDelimitersAndLeadingZeros(value) {
+		if (value === '0') {
+			return '0';
+		}
+
 		var cleanValue = value.replace(/^-/,'').replace(/^0*/, '');
-		cleanValue = cleanValue.replace(/[^0-9]/g, '');
-		return cleanValue;
+		return cleanValue.replace(/[^0-9]/g, '');
 	}
 
 	function prepareNumberToFormatter (value, decimals) {
