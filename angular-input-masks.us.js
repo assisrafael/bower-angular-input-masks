@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.2.0
+ * @version v2.3.0
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -20,7 +20,7 @@ var moment = require('moment');
 var StringMask = require('string-mask');
 
 function isISODateString(date) {
-	return /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/
+	return /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}([-+][0-9]{2}:[0-9]{2}|Z)$/
 		.test(date.toString());
 }
 
@@ -128,7 +128,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 			if (isNaN(decimals)) {
 				decimals = 2;
 			}
-
+			decimals = parseInt(decimals);
 			var moneyMask = maskFactory(decimals);
 
 			function formatter(value) {
@@ -175,6 +175,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 			if (attrs.uiMoneyMask) {
 				scope.$watch(attrs.uiMoneyMask, function(_decimals) {
 					decimals = isNaN(_decimals) ? 2 : _decimals;
+					decimals = parseInt(decimals);
 					moneyMask = maskFactory(decimals);
 
 					parser(ctrl.$viewValue);
@@ -338,7 +339,12 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 		link: function(scope, element, attrs, ctrl) {
 			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
-				decimals = parseInt(attrs.uiPercentageMask);
+				decimals = parseInt(attrs.uiPercentageMask),
+				backspacePressed = false;
+
+			element.bind('keydown keypress', function(event) {
+				backspacePressed = event.which === 8;
+			});
 
 			var modelValue = {
 				multiplier : 100,
@@ -379,6 +385,9 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
 				if (value.length > 1 && value.indexOf('%') === -1) {
 					valueToFormat = valueToFormat.slice(0,valueToFormat.length-1);
+				}
+				if (backspacePressed && value.length === 1 && value !== '%') {
+					valueToFormat = '0';
 				}
 				var formatedValue = viewMask.apply(valueToFormat) + ' %';
 				var actualNumber = parseFloat(modelMask.apply(valueToFormat));
@@ -658,22 +667,6 @@ m.factory('PreFormatters', [function() {
 	return {
 		clearDelimitersAndLeadingZeros: clearDelimitersAndLeadingZeros,
 		prepareNumberToFormatter: prepareNumberToFormatter
-	};
-}])
-.factory('NumberValidators', [function() {
-	return {
-		maxNumber: function maxValidator(ctrl, value, limit) {
-			var max = parseFloat(limit);
-			var validity = ctrl.$isEmpty(value) || isNaN(max)|| value <= max;
-			ctrl.$setValidity('max', validity);
-			return value;
-		},
-		minNumber: function minValidator(ctrl, value, limit) {
-			var min = parseFloat(limit);
-			var validity = ctrl.$isEmpty(value) || isNaN(min) || value >= min;
-			ctrl.$setValidity('min', validity);
-			return value;
-		}
 	};
 }])
 .factory('NumberMasks', [function() {

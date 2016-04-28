@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.2.0
+ * @version v2.3.0
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -4456,10 +4456,11 @@ IErules.AP = [{
 module.exports = angular.module('ui.utils.masks', [
 	require('./global/global-masks'),
 	require('./br/br-masks'),
-	require('./us/us-masks')
+	require('./us/us-masks'),
+	require('./ch/ch-masks')
 ]).name;
 
-},{"./br/br-masks":6,"./global/global-masks":16,"./us/us-masks":24}],5:[function(require,module,exports){
+},{"./br/br-masks":6,"./ch/ch-masks":15,"./global/global-masks":18,"./us/us-masks":26}],5:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -4503,7 +4504,7 @@ var m = angular.module('ui.utils.masks.br', [
 
 module.exports = m.name;
 
-},{"../helpers":22,"./boleto-bancario/boleto-bancario":5,"./car-plate/car-plate":7,"./cep/cep":8,"./cnpj/cnpj":9,"./cpf-cnpj/cpf-cnpj":10,"./cpf/cpf":11,"./inscricao-estadual/ie":12,"./nfe/nfe":13,"./phone/br-phone":14}],7:[function(require,module,exports){
+},{"../helpers":24,"./boleto-bancario/boleto-bancario":5,"./car-plate/car-plate":7,"./cep/cep":8,"./cnpj/cnpj":9,"./cpf-cnpj/cpf-cnpj":10,"./cpf/cpf":11,"./inscricao-estadual/ie":12,"./nfe/nfe":13,"./phone/br-phone":14}],7:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -4679,7 +4680,7 @@ function BrIeMaskDirective($parse) {
 
 	function getMask(uf, value) {
 		if (!uf || !ieMasks[uf]) {
-			return undefined;
+			return;
 		}
 
 		if (uf === 'SP' && /^P/i.test(value)) {
@@ -4836,11 +4837,48 @@ module.exports = maskFactory({
 },{"mask-factory":"mask-factory","string-mask":3}],15:[function(require,module,exports){
 'use strict';
 
+var m = angular.module('ui.utils.masks.ch', [
+	require('../helpers'),
+])
+.directive('uiChPhoneNumber', require('./phone/ch-phone'));
+
+module.exports = m.name;
+
+},{"../helpers":24,"./phone/ch-phone":16}],16:[function(require,module,exports){
+'use strict';
+
+var StringMask = require('string-mask');
+var maskFactory = require('mask-factory');
+
+var phoneMask = new StringMask('+00 00 000 00 00');
+
+module.exports = maskFactory({
+	clearValue: function(rawValue) {
+		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 11);
+	},
+	format: function(cleanValue) {
+		var formatedValue;
+
+		formatedValue = phoneMask.apply(cleanValue) || '';
+
+		return formatedValue.trim().replace(/[^0-9]$/, '');
+	},
+	validations: {
+		chPhoneNumber: function(value) {
+			var valueLength = value && value.toString().length;
+			return valueLength === 11;
+		}
+	}
+});
+
+},{"mask-factory":"mask-factory","string-mask":3}],17:[function(require,module,exports){
+'use strict';
+
 var moment = require('moment');
 var StringMask = require('string-mask');
 
 function isISODateString(date) {
-	return /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/
+	return /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}([-+][0-9]{2}:[0-9]{2}|Z)$/
 		.test(date.toString());
 }
 
@@ -4904,7 +4942,7 @@ DateMaskDirective.$inject = ['$locale'];
 
 module.exports = DateMaskDirective;
 
-},{"moment":2,"string-mask":3}],16:[function(require,module,exports){
+},{"moment":2,"string-mask":3}],18:[function(require,module,exports){
 'use strict';
 
 var m = angular.module('ui.utils.masks.global', [
@@ -4919,7 +4957,7 @@ var m = angular.module('ui.utils.masks.global', [
 
 module.exports = m.name;
 
-},{"../helpers":22,"./date/date":15,"./money/money":17,"./number/number":18,"./percentage/percentage":19,"./scientific-notation/scientific-notation":20,"./time/time":21}],17:[function(require,module,exports){
+},{"../helpers":24,"./date/date":17,"./money/money":19,"./number/number":20,"./percentage/percentage":21,"./scientific-notation/scientific-notation":22,"./time/time":23}],19:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -4948,7 +4986,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 			if (isNaN(decimals)) {
 				decimals = 2;
 			}
-
+			decimals = parseInt(decimals);
 			var moneyMask = maskFactory(decimals);
 
 			function formatter(value) {
@@ -4995,6 +5033,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 			if (attrs.uiMoneyMask) {
 				scope.$watch(attrs.uiMoneyMask, function(_decimals) {
 					decimals = isNaN(_decimals) ? 2 : _decimals;
+					decimals = parseInt(decimals);
 					moneyMask = maskFactory(decimals);
 
 					parser(ctrl.$viewValue);
@@ -5033,7 +5072,7 @@ MoneyMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters'];
 
 module.exports = MoneyMaskDirective;
 
-},{"string-mask":3,"validators":"validators"}],18:[function(require,module,exports){
+},{"string-mask":3,"validators":"validators"}],20:[function(require,module,exports){
 'use strict';
 
 var validators = require('validators');
@@ -5142,7 +5181,7 @@ NumberMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberMask
 
 module.exports = NumberMaskDirective;
 
-},{"validators":"validators"}],19:[function(require,module,exports){
+},{"validators":"validators"}],21:[function(require,module,exports){
 'use strict';
 
 var validators = require('validators');
@@ -5158,7 +5197,12 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 		link: function(scope, element, attrs, ctrl) {
 			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
-				decimals = parseInt(attrs.uiPercentageMask);
+				decimals = parseInt(attrs.uiPercentageMask),
+				backspacePressed = false;
+
+			element.bind('keydown keypress', function(event) {
+				backspacePressed = event.which === 8;
+			});
 
 			var modelValue = {
 				multiplier : 100,
@@ -5199,6 +5243,9 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 				var valueToFormat = PreFormatters.clearDelimitersAndLeadingZeros(value) || '0';
 				if (value.length > 1 && value.indexOf('%') === -1) {
 					valueToFormat = valueToFormat.slice(0,valueToFormat.length-1);
+				}
+				if (backspacePressed && value.length === 1 && value !== '%') {
+					valueToFormat = '0';
 				}
 				var formatedValue = viewMask.apply(valueToFormat) + ' %';
 				var actualNumber = parseFloat(modelMask.apply(valueToFormat));
@@ -5263,7 +5310,7 @@ PercentageMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'Number
 
 module.exports = PercentageMaskDirective;
 
-},{"validators":"validators"}],20:[function(require,module,exports){
+},{"validators":"validators"}],22:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -5385,7 +5432,7 @@ ScientificNotationMaskDirective.$inject = ['$locale', '$parse'];
 
 module.exports = ScientificNotationMaskDirective;
 
-},{"string-mask":3}],21:[function(require,module,exports){
+},{"string-mask":3}],23:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -5452,7 +5499,7 @@ module.exports = function TimeMaskDirective() {
 	};
 };
 
-},{"string-mask":3}],22:[function(require,module,exports){
+},{"string-mask":3}],24:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -5478,22 +5525,6 @@ m.factory('PreFormatters', [function() {
 	return {
 		clearDelimitersAndLeadingZeros: clearDelimitersAndLeadingZeros,
 		prepareNumberToFormatter: prepareNumberToFormatter
-	};
-}])
-.factory('NumberValidators', [function() {
-	return {
-		maxNumber: function maxValidator(ctrl, value, limit) {
-			var max = parseFloat(limit);
-			var validity = ctrl.$isEmpty(value) || isNaN(max)|| value <= max;
-			ctrl.$setValidity('max', validity);
-			return value;
-		},
-		minNumber: function minValidator(ctrl, value, limit) {
-			var min = parseFloat(limit);
-			var validity = ctrl.$isEmpty(value) || isNaN(min) || value >= min;
-			ctrl.$setValidity('min', validity);
-			return value;
-		}
 	};
 }])
 .factory('NumberMasks', [function() {
@@ -5529,7 +5560,7 @@ m.factory('PreFormatters', [function() {
 	};
 }]);
 
-},{"string-mask":3}],23:[function(require,module,exports){
+},{"string-mask":3}],25:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -5560,7 +5591,7 @@ module.exports = maskFactory({
 	}
 });
 
-},{"mask-factory":"mask-factory","string-mask":3}],24:[function(require,module,exports){
+},{"mask-factory":"mask-factory","string-mask":3}],26:[function(require,module,exports){
 'use strict';
 
 var m = angular.module('ui.utils.masks.us', [
@@ -5570,7 +5601,7 @@ var m = angular.module('ui.utils.masks.us', [
 
 module.exports = m.name;
 
-},{"../helpers":22,"./phone/us-phone":23}],"mask-factory":[function(require,module,exports){
+},{"../helpers":24,"./phone/us-phone":25}],"mask-factory":[function(require,module,exports){
 'use strict';
 
 module.exports = function maskFactory(maskDefinition) {
