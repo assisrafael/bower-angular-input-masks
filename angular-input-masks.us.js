@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.3.0
+ * @version v2.4.0
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -13,7 +13,36 @@ module.exports = angular.module('ui.utils.masks', [
 	require('./us/us-masks')
 ]).name;
 
-},{"./global/global-masks":3,"./us/us-masks":11}],2:[function(require,module,exports){
+},{"./global/global-masks":4,"./us/us-masks":12}],2:[function(require,module,exports){
+'use strict';
+
+var StringMask = require('string-mask');
+var maskFactory = require('mask-factory');
+
+var ccSize = 16;
+
+var ccMask = new StringMask('0000 0000 0000 0000');
+
+module.exports = maskFactory({
+	clearValue: function(rawValue) {
+		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, ccSize);
+	},
+	format: function(cleanValue) {
+		var formatedValue;
+
+		formatedValue = ccMask.apply(cleanValue) || '';
+
+		return formatedValue.trim().replace(/[^0-9]$/, '');
+	},
+	validations: {
+		creditCard: function(value) {
+			var valueLength = value && value.toString().length;
+			return valueLength === ccSize;
+		}
+	}
+});
+
+},{"mask-factory":"mask-factory","string-mask":undefined}],3:[function(require,module,exports){
 'use strict';
 
 var moment = require('moment');
@@ -84,7 +113,7 @@ DateMaskDirective.$inject = ['$locale'];
 
 module.exports = DateMaskDirective;
 
-},{"moment":undefined,"string-mask":undefined}],3:[function(require,module,exports){
+},{"moment":undefined,"string-mask":undefined}],4:[function(require,module,exports){
 'use strict';
 
 var m = angular.module('ui.utils.masks.global', [
@@ -95,11 +124,12 @@ var m = angular.module('ui.utils.masks.global', [
 .directive('uiNumberMask', require('./number/number'))
 .directive('uiPercentageMask', require('./percentage/percentage'))
 .directive('uiScientificNotationMask', require('./scientific-notation/scientific-notation'))
-.directive('uiTimeMask', require('./time/time'));
+.directive('uiTimeMask', require('./time/time'))
+.directive('uiCreditCard', require('./credit-card/credit-card'));
 
 module.exports = m.name;
 
-},{"../helpers":9,"./date/date":2,"./money/money":4,"./number/number":5,"./percentage/percentage":6,"./scientific-notation/scientific-notation":7,"./time/time":8}],4:[function(require,module,exports){
+},{"../helpers":10,"./credit-card/credit-card":2,"./date/date":3,"./money/money":5,"./number/number":6,"./percentage/percentage":7,"./scientific-notation/scientific-notation":8,"./time/time":9}],5:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -147,6 +177,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 
 				var actualNumber = value.replace(/[^\d]+/g,'');
 				actualNumber = actualNumber.replace(/^[0]+([1-9])/,'$1');
+				actualNumber = actualNumber || '0';
 				var formatedValue = moneyMask.apply(actualNumber);
 
 				if (angular.isDefined(attrs.uiNegativeNumber)) {
@@ -214,7 +245,7 @@ MoneyMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters'];
 
 module.exports = MoneyMaskDirective;
 
-},{"string-mask":undefined,"validators":"validators"}],5:[function(require,module,exports){
+},{"string-mask":undefined,"validators":"validators"}],6:[function(require,module,exports){
 'use strict';
 
 var validators = require('validators');
@@ -252,11 +283,11 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 					var isNegative = (value[0] === '-'),
 						needsToInvertSign = (value.slice(-1) === '-');
 
-					//only apply the minus sign if it is negative or(exclusive)
+					//only apply the minus sign if it is negative or(exclusive) or the first character
 					//needs to be negative and the number is different from zero
-					if (needsToInvertSign ^ isNegative && !!actualNumber) {
+					if ((needsToInvertSign ^ isNegative) || value === '-') {
 						actualNumber *= -1;
-						formatedValue = '-' + formatedValue;
+						formatedValue = '-' + ((actualNumber !== 0) ? formatedValue : '');
 					}
 				}
 
@@ -277,6 +308,15 @@ function NumberMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 				var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
 				return prefix + viewMask.apply(valueToFormat);
 			}
+
+			function clearViewValueIfMinusSign() {
+				if (ctrl.$viewValue === '-') {
+					ctrl.$setViewValue('');
+					ctrl.$render();
+				}
+			}
+
+			element.on('blur', clearViewValueIfMinusSign);
 
 			ctrl.$formatters.push(formatter);
 			ctrl.$parsers.push(parser);
@@ -323,7 +363,7 @@ NumberMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'NumberMask
 
 module.exports = NumberMaskDirective;
 
-},{"validators":"validators"}],6:[function(require,module,exports){
+},{"validators":"validators"}],7:[function(require,module,exports){
 'use strict';
 
 var validators = require('validators');
@@ -452,7 +492,7 @@ PercentageMaskDirective.$inject = ['$locale', '$parse', 'PreFormatters', 'Number
 
 module.exports = PercentageMaskDirective;
 
-},{"validators":"validators"}],7:[function(require,module,exports){
+},{"validators":"validators"}],8:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -574,7 +614,7 @@ ScientificNotationMaskDirective.$inject = ['$locale', '$parse'];
 
 module.exports = ScientificNotationMaskDirective;
 
-},{"string-mask":undefined}],8:[function(require,module,exports){
+},{"string-mask":undefined}],9:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -641,7 +681,7 @@ module.exports = function TimeMaskDirective() {
 	};
 };
 
-},{"string-mask":undefined}],9:[function(require,module,exports){
+},{"string-mask":undefined}],10:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -702,7 +742,7 @@ m.factory('PreFormatters', [function() {
 	};
 }]);
 
-},{"string-mask":undefined}],10:[function(require,module,exports){
+},{"string-mask":undefined}],11:[function(require,module,exports){
 'use strict';
 
 var StringMask = require('string-mask');
@@ -733,7 +773,7 @@ module.exports = maskFactory({
 	}
 });
 
-},{"mask-factory":"mask-factory","string-mask":undefined}],11:[function(require,module,exports){
+},{"mask-factory":"mask-factory","string-mask":undefined}],12:[function(require,module,exports){
 'use strict';
 
 var m = angular.module('ui.utils.masks.us', [
@@ -743,7 +783,7 @@ var m = angular.module('ui.utils.masks.us', [
 
 module.exports = m.name;
 
-},{"../helpers":9,"./phone/us-phone":10}],"mask-factory":[function(require,module,exports){
+},{"../helpers":10,"./phone/us-phone":11}],"mask-factory":[function(require,module,exports){
 'use strict';
 
 module.exports = function maskFactory(maskDefinition) {
