@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.4.0
+ * @version v2.5.0
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -180,16 +180,29 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
 				currencySym = $locale.NUMBER_FORMATS.CURRENCY_SYM,
+				symbolSeparation = ' ',
 				decimals = $parse(attrs.uiMoneyMask)(scope);
+
 
 			function maskFactory(decimals) {
 				var decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
-				var maskPattern = currencySym + ' #' + thousandsDelimiter + '##0' + decimalsPattern;
+				var maskPattern = symbolSeparation + '#' + thousandsDelimiter + '##0' + decimalsPattern;
 				return new StringMask(maskPattern, {reverse: true});
 			}
 
 			if (angular.isDefined(attrs.uiHideGroupSep)) {
 				thousandsDelimiter = '';
+			}
+
+			if (angular.isDefined(attrs.uiHideSpace)) {
+				symbolSeparation = '';
+			}
+
+			if (angular.isDefined(attrs.currencySymbol)) {
+				currencySym = attrs.currencySymbol;
+				if (attrs.currencySymbol.length === 0) {
+					symbolSeparation = '';
+				}
 			}
 
 			if (isNaN(decimals)) {
@@ -204,7 +217,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 				}
 				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value < 0) ? '-' : '';
 				var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
-				return prefix + moneyMask.apply(valueToFormat);
+				return prefix + currencySym + moneyMask.apply(valueToFormat);
 			}
 
 			function parser(value) {
@@ -215,7 +228,7 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 				var actualNumber = value.replace(/[^\d]+/g,'');
 				actualNumber = actualNumber.replace(/^[0]+([1-9])/,'$1');
 				actualNumber = actualNumber || '0';
-				var formatedValue = moneyMask.apply(actualNumber);
+				var formatedValue = currencySym + moneyMask.apply(actualNumber);
 
 				if (angular.isDefined(attrs.uiNegativeNumber)) {
 					var isNegative = (value[0] === '-'),
@@ -417,6 +430,7 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 			var decimalDelimiter = $locale.NUMBER_FORMATS.DECIMAL_SEP,
 				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
 				decimals = parseInt(attrs.uiPercentageMask),
+				hideSpace = false,
 				backspacePressed = false;
 
 			element.bind('keydown keypress', function(event) {
@@ -430,6 +444,10 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 
 			if (angular.isDefined(attrs.uiHideGroupSep)) {
 				thousandsDelimiter = '';
+			}
+
+			if (angular.isDefined(attrs.uiHideSpace)) {
+				hideSpace = true;
 			}
 
 			if (angular.isDefined(attrs.uiPercentageValue)) {
@@ -466,7 +484,8 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 				if (backspacePressed && value.length === 1 && value !== '%') {
 					valueToFormat = '0';
 				}
-				var formatedValue = viewMask.apply(valueToFormat) + ' %';
+				var percentSign = hideSpace ? '%' : ' %';
+				var formatedValue = viewMask.apply(valueToFormat) + percentSign;
 				var actualNumber = parseFloat(modelMask.apply(valueToFormat));
 
 				if (ctrl.$viewValue !== formatedValue) {
