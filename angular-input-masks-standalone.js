@@ -1,7 +1,7 @@
 /**
  * angular-input-masks
  * Personalized input masks for AngularJS
- * @version v2.5.0
+ * @version v2.6.0
  * @link http://github.com/assisrafael/angular-input-masks
  * @license MIT
  */
@@ -5449,35 +5449,51 @@ var maskFactory = require('mask-factory');
  * FIXME: all numbers will have 9 digits after 2016.
  * see http://portal.embratel.com.br/embratel/9-digito/
  */
-var phoneMask8D = new StringMask('(00) 0000-0000'),
-	phoneMask9D = new StringMask('(00) 00000-0000'),
-	phoneMask0800 = new StringMask('0000-000-0000');
+var phoneMask8D = {
+		areaCode: new StringMask('(00) 0000-0000'), 	//with area code
+		simple: new StringMask('0000-0000') 			//without area code
+	}, phoneMask9D = {
+		areaCode: new StringMask('(00) 00000-0000'), 	//with area code
+		simple: new StringMask('00000-0000') 			//without area code
+	}, phoneMask0800 = {
+		areaCode: null,									//N/A
+		simple: new StringMask('0000-000-0000') 		//N/A, so it's "simple"
+	};
 
 module.exports = maskFactory({
 	clearValue: function(rawValue) {
 		return rawValue.toString().replace(/[^0-9]/g, '').slice(0, 11);
 	},
 	format: function(cleanValue) {
-		var formatedValue;
+		var formattedValue;
+
 		if (cleanValue.indexOf('0800') === 0) {
-			formatedValue = phoneMask0800.apply(cleanValue);
+			formattedValue = phoneMask0800.simple.apply(cleanValue);
+		} else if (cleanValue.length < 9) {
+			formattedValue = phoneMask8D.simple.apply(cleanValue) || '';
+		} else if (cleanValue.length < 10) {
+			formattedValue = phoneMask9D.simple.apply(cleanValue);
 		} else if (cleanValue.length < 11) {
-			formatedValue = phoneMask8D.apply(cleanValue) || '';
+			formattedValue = phoneMask8D.areaCode.apply(cleanValue);
 		} else {
-			formatedValue = phoneMask9D.apply(cleanValue);
+			formattedValue = phoneMask9D.areaCode.apply(cleanValue);
 		}
 
-		return formatedValue.trim().replace(/[^0-9]$/, '');
+		return formattedValue.trim().replace(/[^0-9]$/, '');
 	},
 	getModelValue: function(formattedValue, originalModelType) {
 		var cleanValue = this.clearValue(formattedValue);
-
 		return originalModelType === 'number' ? parseInt(cleanValue) : cleanValue;
 	},
 	validations: {
 		brPhoneNumber: function(value) {
 			var valueLength = value && value.toString().length;
-			return valueLength === 10 || valueLength === 11;
+
+			//8- 8D without DD
+			//9- 9D without DD
+			//10- 9D with DD
+			//11- 8D with DD and 0800
+			return valueLength >= 8 && valueLength <= 11;
 		}
 	}
 });
@@ -5562,6 +5578,7 @@ function isISODateString(date) {
 function DateMaskDirective($locale) {
 	var dateFormatMapByLocale = {
 		'pt-br': 'DD/MM/YYYY',
+		'ru': 'DD.MM.YYYY',
 	};
 
 	var dateFormat = dateFormatMapByLocale[$locale.id] || 'YYYY-MM-DD';
@@ -5570,6 +5587,10 @@ function DateMaskDirective($locale) {
 		restrict: 'A',
 		require: 'ngModel',
 		link: function(scope, element, attrs, ctrl) {
+			attrs.parse = attrs.parse || 'true';
+
+			dateFormat = attrs.uiDateMask || dateFormat;
+
 			var dateMask = new StringMask(dateFormat.replace(/[YMD]/g,'0'));
 
 			function formatter(value) {
@@ -5602,7 +5623,9 @@ function DateMaskDirective($locale) {
 					ctrl.$render();
 				}
 
-				return moment(formatedValue, dateFormat).toDate();
+				return attrs.parse === 'false'
+					? formatedValue
+					: moment(formatedValue, dateFormat).toDate();
 			});
 
 			ctrl.$validators.date =	function validator(modelValue, viewValue) {
@@ -5650,13 +5673,30 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 				thousandsDelimiter = $locale.NUMBER_FORMATS.GROUP_SEP,
 				currencySym = $locale.NUMBER_FORMATS.CURRENCY_SYM,
 				symbolSeparation = ' ',
-				decimals = $parse(attrs.uiMoneyMask)(scope);
+				decimals = $parse(attrs.uiMoneyMask)(scope),
+				backspacePressed = false;
 
+			element.bind('keydown keypress', function(event) {
+				backspacePressed = event.which === 8;
+			});
 
 			function maskFactory(decimals) {
 				var decimalsPattern = decimals > 0 ? decimalDelimiter + new Array(decimals + 1).join('0') : '';
-				var maskPattern = symbolSeparation + '#' + thousandsDelimiter + '##0' + decimalsPattern;
+				var maskPattern =  '#' + thousandsDelimiter + '##0' + decimalsPattern;
+				if (angular.isDefined(attrs.uiCurrencyAfter)) {
+					maskPattern += symbolSeparation;
+				} else {
+					maskPattern =  symbolSeparation + maskPattern;
+				}
 				return new StringMask(maskPattern, {reverse: true});
+			}
+
+			if (angular.isDefined(attrs.uiDecimalDelimiter)) {
+				decimalDelimiter = attrs.uiDecimalDelimiter;
+			}
+
+			if (angular.isDefined(attrs.uiThousandsDelimiter)) {
+				thousandsDelimiter = attrs.uiThousandsDelimiter;
 			}
 
 			if (angular.isDefined(attrs.uiHideGroupSep)) {
@@ -5686,6 +5726,9 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 				}
 				var prefix = (angular.isDefined(attrs.uiNegativeNumber) && value < 0) ? '-' : '';
 				var valueToFormat = PreFormatters.prepareNumberToFormatter(value, decimals);
+				if (angular.isDefined(attrs.uiCurrencyAfter)) {
+					return prefix + moneyMask.apply(valueToFormat) + currencySym;
+				}
 				return prefix + currencySym + moneyMask.apply(valueToFormat);
 			}
 
@@ -5694,10 +5737,19 @@ function MoneyMaskDirective($locale, $parse, PreFormatters) {
 					return value;
 				}
 
-				var actualNumber = value.replace(/[^\d]+/g,'');
+				var actualNumber = value.replace(/[^\d]+/g,''), formatedValue;
 				actualNumber = actualNumber.replace(/^[0]+([1-9])/,'$1');
 				actualNumber = actualNumber || '0';
-				var formatedValue = currencySym + moneyMask.apply(actualNumber);
+
+				if (backspacePressed && angular.isDefined(attrs.uiCurrencyAfter) && actualNumber !== 0) {
+					actualNumber = actualNumber.substring(0, actualNumber.length - 1);
+					backspacePressed = false;
+				}
+				if (angular.isDefined(attrs.uiCurrencyAfter)) {
+					formatedValue = moneyMask.apply(actualNumber) + currencySym;
+				} else {
+					formatedValue = currencySym + moneyMask.apply(actualNumber);
+				}
 
 				if (angular.isDefined(attrs.uiNegativeNumber)) {
 					var isNegative = (value[0] === '-'),
@@ -5938,7 +5990,7 @@ function PercentageMaskDirective($locale, $parse, PreFormatters, NumberMasks) {
 				}
 
 				var valueToFormat = preparePercentageToFormatter(value, decimals, modelValue.multiplier);
-				return viewMask.apply(valueToFormat) + ' %';
+				return viewMask.apply(valueToFormat) + (hideSpace ? '%' : ' %');
 			}
 
 			function parse(value) {
